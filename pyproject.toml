@@ -1,0 +1,37 @@
+[project]
+name = "email-infra"
+version = "1.0.0"
+description = "Email infrastructure with DMARC collection and DNS management"
+authors = [{name = "Melvyn de Kort", email = "melvyn@mdekort.nl"}]
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32",
+    "boto3>=1.40",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4",
+    "pytest-cov>=7.0",
+    "pylint>=3.3",
+    "boto3>=1.40",
+    "moto>=5.1",
+    "boto3-stubs>=1.40",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["email_infra"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.pylint.main]
+load-plugins = ["pylint.extensions.docparams"]
+
+[tool.pylint.format]
+max-line-length = 120
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
