@@ -67,6 +67,13 @@ def test_handler_with_s3_record(mock_boto3, mock_get_token, mock_requests):
     assert mock_requests.call_count == 3  # email_count, spf_result, dkim_result
     mock_get_token.assert_called()
 
+    # Verify protobuf format is used
+    for call in mock_requests.call_args_list:
+        _, kwargs = call
+        assert 'data' in kwargs  # Binary data instead of json
+        assert kwargs['headers']['Content-Type'] == 'application/x-protobuf'
+        assert kwargs['headers']['Content-Encoding'] == 'snappy'
+
 
 @patch("email_infra.handler.requests.post")
 @patch("email_infra.handler._get_grafana_token")

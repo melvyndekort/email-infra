@@ -7,6 +7,8 @@ requires-python = ">=3.12"
 dependencies = [
     "requests>=2.32",
     "boto3>=1.40",
+    "prometheus-client>=0.21",
+    "python-snappy>=0.7",
 ]
 
 [project.optional-dependencies]
