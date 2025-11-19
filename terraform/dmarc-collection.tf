@@ -135,7 +135,7 @@ EOF
 resource "aws_lambda_function" "dmarc_processor" {
   function_name = var.lambda_function_name
   role          = aws_iam_role.dmarc_processor.arn
-  handler       = "handler.handler"
+  handler       = "email_infra.handler.handler"
   runtime       = "python3.12"
   timeout       = 60
   memory_size   = var.lambda_memory_size
@@ -209,6 +209,13 @@ resource "aws_iam_role_policy" "dmarc_processor" {
           "s3:GetObject"
         ]
         Resource = "${aws_s3_bucket.dmarc_reports.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = "${aws_s3_bucket.dmarc_reports.arn}"
       },
       {
         Effect = "Allow"
