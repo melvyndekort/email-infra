@@ -111,8 +111,26 @@ resource "aws_ses_receipt_rule" "dmarc_reports" {
   recipients = [var.dmarc_email]
 
   s3_action {
-    bucket_name = aws_s3_bucket.dmarc_reports.bucket
-    position    = 1
+    bucket_name       = aws_s3_bucket.dmarc_reports.bucket
+    object_key_prefix = "dmarc/"
+    position          = 1
+  }
+
+  depends_on = [aws_s3_bucket_policy.dmarc_reports]
+}
+
+resource "aws_ses_receipt_rule" "tlsrpt_reports" {
+  name          = "tlsrpt-reports"
+  rule_set_name = aws_ses_receipt_rule_set.dmarc.rule_set_name
+  enabled       = true
+  scan_enabled  = true
+
+  recipients = ["tlsrpt@${split("@", var.dmarc_email)[1]}"]
+
+  s3_action {
+    bucket_name       = aws_s3_bucket.dmarc_reports.bucket
+    object_key_prefix = "tlsrpt/"
+    position          = 1
   }
 
   depends_on = [aws_s3_bucket_policy.dmarc_reports]
@@ -235,6 +253,7 @@ resource "aws_s3_bucket_notification" "dmarc_reports" {
   lambda_function {
     lambda_function_arn = aws_lambda_function.dmarc_processor.arn
     events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "dmarc/"
   }
 
   depends_on = [aws_lambda_permission.dmarc_processor]

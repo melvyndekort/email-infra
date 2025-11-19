@@ -19,6 +19,16 @@ resource "cloudflare_dns_record" "dmarc" {
   content = "v=DMARC1;p=reject;rua=mailto:${var.dmarc_email};ruf=mailto:${var.dmarc_email};fo=1"
 }
 
+resource "cloudflare_dns_record" "dkim_policy" {
+  for_each = local.domains
+
+  zone_id = each.value.zone_id
+  name    = "_domainkey"
+  type    = "TXT"
+  ttl     = var.dns_ttl
+  content = "o=-"
+}
+
 resource "cloudflare_dns_record" "bimi" {
   for_each = local.domains
 
@@ -41,6 +51,17 @@ resource "cloudflare_dns_record" "mx" {
   ttl      = var.dns_ttl
   content  = each.value.content
   priority = each.value.priority
+}
+
+# DMARC external verification records
+resource "cloudflare_dns_record" "dmarc_verification" {
+  for_each = local.domains
+
+  zone_id = local.domains["mdekort.nl"].zone_id
+  name    = "${each.key}._report._dmarc"
+  type    = "TXT"
+  ttl     = var.dns_ttl
+  content = "v=DMARC1"
 }
 
 # DMARC collection subdomain
