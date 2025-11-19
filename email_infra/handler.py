@@ -47,8 +47,8 @@ def _send_to_grafana(metric_name, value, labels=None):
     response = requests.post(
         grafana_url,
         json=payload,
+        auth=(os.environ['GRAFANA_USER_ID'], grafana_token),
         headers={
-            "Authorization": f"Bearer {grafana_token}",
             "Content-Type": "application/json"
         },
         timeout=10
