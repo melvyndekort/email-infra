@@ -2,7 +2,7 @@
 resource "aws_ssm_parameter" "grafana_token" {
   name  = "/grafana/token"
   type  = "SecureString"
-  value = data.terraform_remote_state.cloudsetup.outputs.grafana_email_infra_token
+  value = local.secrets.grafana.metrics_token
 
   tags = {
     Purpose = "Grafana Cloud Authentication"
@@ -146,7 +146,8 @@ resource "aws_lambda_function" "dmarc_processor" {
   environment {
     variables = {
       S3_BUCKET        = aws_s3_bucket.dmarc_reports.bucket
-      GRAFANA_PUSH_URL = "${data.terraform_remote_state.cloudsetup.outputs.grafana_cloud_prometheus_url}/api/v1/push"
+      GRAFANA_PUSH_URL = "${data.terraform_remote_state.cloudsetup.outputs.grafana_cloud_prometheus_url}/api/prom/push"
+      GRAFANA_USER_ID  = "1552545"
     }
   }
 
