@@ -22,7 +22,10 @@ def test_handler_with_empty_records():
 @patch("email_infra.handler.requests.post")
 @patch("email_infra.handler._get_grafana_token")
 @patch("email_infra.handler.boto3.client")
-@patch.dict(os.environ, {"GRAFANA_PUSH_URL": "https://test.grafana.net/api/v1/push"})
+@patch.dict(os.environ, {
+    "GRAFANA_PUSH_URL": "https://test.grafana.net/api/v1/push",
+    "GRAFANA_USER_ID": "test_user"
+})
 def test_handler_with_s3_record(mock_boto3, mock_get_token, mock_requests):
     """Test handler with S3 record."""
     # Mock S3 client
@@ -68,7 +71,10 @@ def test_handler_with_s3_record(mock_boto3, mock_get_token, mock_requests):
 @patch("email_infra.handler.requests.post")
 @patch("email_infra.handler._get_grafana_token")
 @patch("email_infra.handler.boto3.client")
-@patch.dict(os.environ, {"GRAFANA_PUSH_URL": "https://test.grafana.net/api/v1/push"})
+@patch.dict(os.environ, {
+    "GRAFANA_PUSH_URL": "https://test.grafana.net/api/v1/push",
+    "GRAFANA_USER_ID": "test_user"
+})
 def test_handler_with_gzipped_content(mock_boto3, mock_get_token, mock_requests):
     """Test handler with gzipped S3 content."""
     # Mock S3 client
@@ -114,7 +120,10 @@ def test_handler_with_gzipped_content(mock_boto3, mock_get_token, mock_requests)
 @patch("email_infra.handler.requests.post")
 @patch("email_infra.handler._get_grafana_token")
 @patch("email_infra.handler.boto3.client")
-@patch.dict(os.environ, {"GRAFANA_PUSH_URL": "https://test.grafana.net/api/v1/push"})
+@patch.dict(os.environ, {
+    "GRAFANA_PUSH_URL": "https://test.grafana.net/api/v1/push",
+    "GRAFANA_USER_ID": "test_user"
+})
 def test_handler_with_missing_xml_elements(mock_boto3, mock_get_token, mock_requests):
     """Test handler with XML missing some elements."""
     # Mock S3 client
