@@ -39,6 +39,6 @@ provider "cloudflare" {
 }
 
 provider "grafana" {
-  url  = "https://mdekort.grafana.net"
-  auth = data.terraform_remote_state.cloudsetup.outputs.grafana_email_infra_token
+  url  = data.terraform_remote_state.tf_grafana.outputs.grafana_url
+  auth = data.terraform_remote_state.tf_grafana.outputs.email_infra_token
 }

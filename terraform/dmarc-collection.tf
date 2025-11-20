@@ -164,7 +164,7 @@ resource "aws_lambda_function" "dmarc_processor" {
   environment {
     variables = {
       S3_BUCKET        = aws_s3_bucket.dmarc_reports.bucket
-      GRAFANA_PUSH_URL = "${data.terraform_remote_state.cloudsetup.outputs.grafana_cloud_prometheus_url}/api/prom/push"
+      GRAFANA_PUSH_URL = "${data.terraform_remote_state.tf_grafana.outputs.prometheus_url}/api/prom/push"
       GRAFANA_USER_ID  = "1552545"
     }
   }
