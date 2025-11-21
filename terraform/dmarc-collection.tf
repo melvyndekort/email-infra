@@ -94,6 +94,15 @@ resource "aws_ses_domain_identity" "dmarc_reports" {
   domain = split("@", var.dmarc_email)[1]
 }
 
+# DNS verification record for DMARC domain
+resource "cloudflare_dns_record" "dmarc_domain_verification" {
+  zone_id = data.terraform_remote_state.tf_cloudflare.outputs.mdekort_zone_id
+  name    = "_amazonses.dmarc"
+  type    = "TXT"
+  ttl     = var.dns_ttl
+  content = aws_ses_domain_identity.dmarc_reports.verification_token
+}
+
 resource "aws_ses_receipt_rule_set" "dmarc" {
   rule_set_name = "dmarc-reports"
 }
