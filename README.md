@@ -1,13 +1,15 @@
 # Email Infrastructure
 
-Self-hosted email infrastructure with DMARC collection and DNS management.
+Comprehensive self-hosted email infrastructure with authentication, monitoring, and family email routing.
 
 ## Features
 
-- **DMARC Collection**: AWS SES + S3 + Lambda for processing DMARC reports
-- **Email DNS**: SPF, DMARC, BIMI, MTA-STS, and TLS-RPT records for all domains
-- **Email Routing**: Cloudflare Email Routing for family members
-- **Monitoring**: Grafana Cloud dashboard with DMARC metrics
+- **DMARC & TLS-RPT Collection**: AWS SES + S3 + Lambda for processing email security reports
+- **DKIM Signing**: Full DKIM signing for all domains via AWS SES
+- **Email DNS**: SPF, DMARC, DKIM, BIMI, MTA-STS, and TLS-RPT records for all domains
+- **Email Routing**: Cloudflare Email Routing with family member addresses and catch-all rules
+- **SMTP Services**: SES-based SMTP for applications (Calibre, Spotweb, etc.)
+- **Monitoring**: Grafana Cloud dashboard with DMARC and authentication metrics
 - **Cost-effective**: Serverless architecture with minimal costs
 
 ## Domains Managed
@@ -23,18 +25,25 @@ Self-hosted email infrastructure with DMARC collection and DNS management.
 │   Email     │───▶│     SES     │───▶│     S3      │───▶│   Lambda    │
 │  Providers  │    │  Receiver   │    │   Storage   │    │  Processor  │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-                                                                  │
-                                                                  ▼
-                                                          ┌─────────────┐
-                                                          │   Grafana   │
-                                                          │ Cloud Metrics│
-                                                          └─────────────┘
+                           │                                      │
+                           │                                      ▼
+                           ▼                              ┌─────────────┐
+                   ┌─────────────┐                       │   Grafana   │
+                   │ Applications│                       │ Cloud Metrics│
+                   │ (SMTP Send) │                       └─────────────┘
+                   └─────────────┘
 ```
 
+**Report Collection**
 1. **SES** receives DMARC reports at `dmarc@dmarc.mdekort.nl`
-2. **S3** stores raw reports with 90-day lifecycle
-3. **Lambda** processes reports and pushes metrics to Grafana Cloud
-4. **Grafana** provides dashboards and alerting
+2. **SES** receives TLS-RPT reports at `tlsrpt@dmarc.mdekort.nl`
+3. **S3** stores raw reports with 90-day lifecycle (separate dmarc/ and tlsrpt/ prefixes)
+4. **Lambda** processes DMARC reports and pushes metrics to Grafana Cloud
+
+**Email Services**
+- **SES** provides DKIM signing for all outbound emails
+- **Applications** use SES SMTP for sending (Calibre, Spotweb, etc.)
+- **Cloudflare** routes incoming emails to family members
 
 ## Migration from EasyDMARC
 
@@ -100,20 +109,14 @@ Access the DMARC dashboard at: [mdekort.grafana.net](https://mdekort.grafana.net
 - `dmarc_dkim_result` - DKIM authentication results
 - `dmarc_policy_result` - DMARC policy evaluation results
 
-### Email Routing
-
-Cloudflare Email Routing handles incoming emails:
-- Family member addresses route to personal Gmail accounts
-- Catch-all rules forward unmatched emails to admin
-
 ## Cost Estimation
 
-- **SES**: ~$0.10 per 1,000 emails received
+- **SES**: ~$0.10 per 1,000 emails received + $0.10 per 1,000 emails sent
 - **S3**: ~$0.023 per GB stored (90-day lifecycle)
 - **Lambda**: ~$0.20 per 1M requests
 - **Grafana Cloud**: Free tier (up to 10k metrics)
 
-**Estimated monthly cost**: <$3 for typical email volumes
+**Estimated monthly cost**: <$5 for typical email volumes
 
 ## Troubleshooting
 
@@ -123,9 +126,17 @@ Check CloudWatch Logs: `/aws/lambda/dmarc-processor`
 
 ### Missing Reports
 
-1. Verify SES receipt rule is active
+1. Verify SES receipt rules are active (DMARC and TLS-RPT)
 2. Check S3 bucket permissions
 3. Confirm DMARC record points to correct email
+4. Verify domain verification status in SES
+
+### SMTP Issues
+
+1. Check SES sending statistics for bounces/complaints
+2. Verify DKIM records are properly configured
+3. Confirm application SMTP credentials are correct
+4. Check SES sandbox mode (if applicable)
 
 ### DNS Issues
 
@@ -138,6 +149,9 @@ dig MX yourdomain.com
 
 # Check MTA-STS record
 dig TXT _mta-sts.yourdomain.com
+
+# Check DKIM records
+dig TXT selector._domainkey.yourdomain.com
 ```
 
 ## Security

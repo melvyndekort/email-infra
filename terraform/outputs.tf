@@ -78,24 +78,4 @@ output "spotweb_password" {
   sensitive   = true
 }
 
-output "nextcloud_user" {
-  description = "Nextcloud SMTP username"
-  value       = aws_iam_access_key.nextcloud.id
-}
 
-output "nextcloud_password" {
-  description = "Nextcloud SMTP password"
-  value       = aws_iam_access_key.nextcloud.ses_smtp_password_v4
-  sensitive   = true
-}
-
-output "projectsend_user" {
-  description = "ProjectSend SMTP username"
-  value       = aws_iam_access_key.projectsend.id
-}
-
-output "projectsend_password" {
-  description = "ProjectSend SMTP password"
-  value       = aws_iam_access_key.projectsend.ses_smtp_password_v4
-  sensitive   = true
-}

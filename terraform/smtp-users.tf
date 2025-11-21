@@ -66,25 +66,7 @@ resource "aws_iam_access_key" "spotweb" {
   user = aws_iam_user.spotweb.name
 }
 
-# Nextcloud
-resource "aws_iam_user" "nextcloud" {
-  name = "nextcloud"
-  path = "/ses/"
-}
 
-resource "aws_iam_access_key" "nextcloud" {
-  user = aws_iam_user.nextcloud.name
-}
-
-# ProjectSend
-resource "aws_iam_user" "projectsend" {
-  name = "projectsend"
-  path = "/ses/"
-}
-
-resource "aws_iam_access_key" "projectsend" {
-  user = aws_iam_user.projectsend.name
-}
 
 resource "aws_iam_group_membership" "sendmail" {
   name  = "sendmail"
@@ -94,7 +76,5 @@ resource "aws_iam_group_membership" "sendmail" {
     aws_iam_user.gmail_karin.name,
     aws_iam_user.calibre.name,
     aws_iam_user.spotweb.name,
-    aws_iam_user.nextcloud.name,
-    aws_iam_user.projectsend.name,
   ]
 }
