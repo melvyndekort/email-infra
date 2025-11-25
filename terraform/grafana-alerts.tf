@@ -1,3 +1,14 @@
+# Get Prometheus datasource UID
+data "grafana_data_source" "prometheus" {
+  name = "grafanacloud-mdekort-prom"
+}
+
+# Define datasource UIDs
+locals {
+  prometheus_uid  = data.grafana_data_source.prometheus.uid
+  expressions_uid = "-100" # Built-in expression datasource
+}
+
 # Notification channel for ntfy
 resource "grafana_contact_point" "ntfy" {
   name = "ntfy-email-alerts"
@@ -11,9 +22,10 @@ resource "grafana_contact_point" "ntfy" {
     settings = {
       httpMethod                = "POST"
       url                       = "https://ntfy.mdekort.nl/grafana"
-      title                     = "Email Infrastructure Alert"
+      title                     = "{{ .GroupLabels.alertname }}"
       authorization_scheme      = "Bearer"
       authorization_credentials = local.secrets.ntfy.token
+      message                   = "{{ range .Alerts }}{{ .Annotations.summary }}{{ if .Annotations.description }}\n\n{{ .Annotations.description }}{{ end }}{{ end }}"
     }
   }
 }
@@ -44,7 +56,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         from = 600
         to   = 0
       }
-      datasource_uid = ""
+      datasource_uid = local.prometheus_uid
       model = jsonencode({
         expr          = "sum(rate(dmarc_email_count{dmarc_result!=\"pass\"}[5m])) / sum(rate(dmarc_email_count[5m])) * 100"
         intervalMs    = 1000
@@ -59,7 +71,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         from = 0
         to   = 0
       }
-      datasource_uid = ""
+      datasource_uid = local.expressions_uid
       model = jsonencode({
         conditions = [
           {
@@ -82,7 +94,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         ]
         datasource = {
           type = "__expr__"
-          uid  = "-100"
+          uid  = local.expressions_uid
         }
         expression    = "A"
         hide          = false
@@ -119,7 +131,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         from = 300
         to   = 0
       }
-      datasource_uid = ""
+      datasource_uid = local.prometheus_uid
       model = jsonencode({
         expr          = "sum(rate(aws_lambda_errors_total{function_name=\"dmarc-processor\"}[5m]))"
         intervalMs    = 1000
@@ -134,7 +146,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         from = 0
         to   = 0
       }
-      datasource_uid = ""
+      datasource_uid = local.expressions_uid
       model = jsonencode({
         conditions = [
           {
@@ -157,7 +169,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         ]
         datasource = {
           type = "__expr__"
-          uid  = "-100"
+          uid  = local.expressions_uid
         }
         expression    = "A"
         hide          = false
@@ -191,12 +203,12 @@ resource "grafana_rule_group" "dmarc_alerts" {
     data {
       ref_id = "A"
       relative_time_range {
-        from = 86400
+        from = 604800
         to   = 0
       }
-      datasource_uid = ""
+      datasource_uid = local.prometheus_uid
       model = jsonencode({
-        expr          = "sum(increase(dmarc_email_count[24h]))"
+        expr          = "sum(increase(dmarc_email_count[7d]))"
         intervalMs    = 1000
         maxDataPoints = 43200
         refId         = "A"
@@ -209,7 +221,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         from = 0
         to   = 0
       }
-      datasource_uid = ""
+      datasource_uid = local.expressions_uid
       model = jsonencode({
         conditions = [
           {
@@ -232,7 +244,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         ]
         datasource = {
           type = "__expr__"
-          uid  = "-100"
+          uid  = local.expressions_uid
         }
         expression    = "A"
         hide          = false
@@ -249,8 +261,8 @@ resource "grafana_rule_group" "dmarc_alerts" {
     exec_err_state = "Alerting"
 
     annotations = {
-      summary     = "No DMARC reports received in 24 hours"
-      description = "No DMARC reports have been processed in the last 24 hours, which may indicate an issue with report collection"
+      summary     = "No DMARC reports received in 7 days"
+      description = "No DMARC reports have been processed in the last 7 days, which may indicate an issue with report collection"
     }
 
     labels = {
@@ -269,7 +281,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         from = 1800
         to   = 0
       }
-      datasource_uid = ""
+      datasource_uid = local.prometheus_uid
       model = jsonencode({
         expr          = "sum(rate(dmarc_spf_result{result!=\"pass\"}[5m])) / sum(rate(dmarc_spf_result[5m])) * 100"
         intervalMs    = 1000
@@ -284,7 +296,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         from = 0
         to   = 0
       }
-      datasource_uid = ""
+      datasource_uid = local.expressions_uid
       model = jsonencode({
         conditions = [
           {
@@ -307,7 +319,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         ]
         datasource = {
           type = "__expr__"
-          uid  = "-100"
+          uid  = local.expressions_uid
         }
         expression    = "A"
         hide          = false
