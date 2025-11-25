@@ -3,16 +3,16 @@ resource "grafana_contact_point" "ntfy" {
   name = "ntfy-email-alerts"
 
   webhook {
-    url                   = "https://ntfy.mdekort.nl/grafana"
-    http_method           = "POST"
-    max_alerts            = 0
+    url                     = "https://ntfy.mdekort.nl/grafana"
+    http_method             = "POST"
+    max_alerts              = 0
     disable_resolve_message = false
-    
+
     settings = {
-      httpMethod = "POST"
-      url        = "https://ntfy.mdekort.nl/grafana"
-      title      = "Email Infrastructure Alert"
-      authorization_scheme = "Bearer"
+      httpMethod                = "POST"
+      url                       = "https://ntfy.mdekort.nl/grafana"
+      title                     = "Email Infrastructure Alert"
+      authorization_scheme      = "Bearer"
       authorization_credentials = local.secrets.ntfy.token
     }
   }
@@ -21,10 +21,10 @@ resource "grafana_contact_point" "ntfy" {
 # Notification policy
 resource "grafana_notification_policy" "email_infra" {
   contact_point = grafana_contact_point.ntfy.name
-  
-  group_by      = ["alertname"]
-  group_wait    = "10s"
-  group_interval = "5m"
+
+  group_by        = ["alertname"]
+  group_wait      = "10s"
+  group_interval  = "5m"
   repeat_interval = "12h"
 }
 
@@ -37,7 +37,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
   rule {
     name      = "High DMARC Failure Rate"
     condition = "C"
-    
+
     data {
       ref_id = "A"
       relative_time_range {
@@ -46,10 +46,10 @@ resource "grafana_rule_group" "dmarc_alerts" {
       }
       datasource_uid = ""
       model = jsonencode({
-        expr         = "sum(rate(dmarc_email_count{dmarc_result!=\"pass\"}[5m])) / sum(rate(dmarc_email_count[5m])) * 100"
-        intervalMs   = 1000
+        expr          = "sum(rate(dmarc_email_count{dmarc_result!=\"pass\"}[5m])) / sum(rate(dmarc_email_count[5m])) * 100"
+        intervalMs    = 1000
         maxDataPoints = 43200
-        refId        = "A"
+        refId         = "A"
       })
     }
 
@@ -84,25 +84,25 @@ resource "grafana_rule_group" "dmarc_alerts" {
           type = "__expr__"
           uid  = "-100"
         }
-        expression = "A"
-        hide       = false
-        intervalMs = 1000
+        expression    = "A"
+        hide          = false
+        intervalMs    = 1000
         maxDataPoints = 43200
-        reducer    = "last"
-        refId      = "C"
-        type       = "threshold"
+        reducer       = "last"
+        refId         = "C"
+        type          = "threshold"
       })
     }
 
-    for = "5m"
-    no_data_state = "Alerting"
+    for            = "5m"
+    no_data_state  = "Alerting"
     exec_err_state = "Alerting"
-    
+
     annotations = {
       summary     = "DMARC failure rate is {{ $value }}%"
       description = "DMARC authentication failure rate has exceeded 5% for the last 5 minutes"
     }
-    
+
     labels = {
       severity = "warning"
       service  = "email-auth"
@@ -112,7 +112,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
   rule {
     name      = "Lambda Function Errors"
     condition = "C"
-    
+
     data {
       ref_id = "A"
       relative_time_range {
@@ -121,10 +121,10 @@ resource "grafana_rule_group" "dmarc_alerts" {
       }
       datasource_uid = ""
       model = jsonencode({
-        expr         = "sum(rate(aws_lambda_errors_total{function_name=\"dmarc-processor\"}[5m]))"
-        intervalMs   = 1000
+        expr          = "sum(rate(aws_lambda_errors_total{function_name=\"dmarc-processor\"}[5m]))"
+        intervalMs    = 1000
         maxDataPoints = 43200
-        refId        = "A"
+        refId         = "A"
       })
     }
 
@@ -159,25 +159,25 @@ resource "grafana_rule_group" "dmarc_alerts" {
           type = "__expr__"
           uid  = "-100"
         }
-        expression = "A"
-        hide       = false
-        intervalMs = 1000
+        expression    = "A"
+        hide          = false
+        intervalMs    = 1000
         maxDataPoints = 43200
-        reducer    = "last"
-        refId      = "C"
-        type       = "threshold"
+        reducer       = "last"
+        refId         = "C"
+        type          = "threshold"
       })
     }
 
-    for = "1m"
-    no_data_state = "Alerting"
+    for            = "1m"
+    no_data_state  = "Alerting"
     exec_err_state = "Alerting"
-    
+
     annotations = {
       summary     = "DMARC processor Lambda errors detected"
       description = "The DMARC processor Lambda function is experiencing errors"
     }
-    
+
     labels = {
       severity = "critical"
       service  = "dmarc-processor"
@@ -187,7 +187,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
   rule {
     name      = "No DMARC Reports Received"
     condition = "C"
-    
+
     data {
       ref_id = "A"
       relative_time_range {
@@ -196,10 +196,10 @@ resource "grafana_rule_group" "dmarc_alerts" {
       }
       datasource_uid = ""
       model = jsonencode({
-        expr         = "sum(increase(dmarc_email_count[24h]))"
-        intervalMs   = 1000
+        expr          = "sum(increase(dmarc_email_count[24h]))"
+        intervalMs    = 1000
         maxDataPoints = 43200
-        refId        = "A"
+        refId         = "A"
       })
     }
 
@@ -234,25 +234,25 @@ resource "grafana_rule_group" "dmarc_alerts" {
           type = "__expr__"
           uid  = "-100"
         }
-        expression = "A"
-        hide       = false
-        intervalMs = 1000
+        expression    = "A"
+        hide          = false
+        intervalMs    = 1000
         maxDataPoints = 43200
-        reducer    = "last"
-        refId      = "C"
-        type       = "threshold"
+        reducer       = "last"
+        refId         = "C"
+        type          = "threshold"
       })
     }
 
-    for = "1h"
-    no_data_state = "Alerting"
+    for            = "1h"
+    no_data_state  = "Alerting"
     exec_err_state = "Alerting"
-    
+
     annotations = {
       summary     = "No DMARC reports received in 24 hours"
       description = "No DMARC reports have been processed in the last 24 hours, which may indicate an issue with report collection"
     }
-    
+
     labels = {
       severity = "warning"
       service  = "dmarc-collection"
@@ -262,7 +262,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
   rule {
     name      = "SPF Authentication Failure Spike"
     condition = "C"
-    
+
     data {
       ref_id = "A"
       relative_time_range {
@@ -271,10 +271,10 @@ resource "grafana_rule_group" "dmarc_alerts" {
       }
       datasource_uid = ""
       model = jsonencode({
-        expr         = "sum(rate(dmarc_spf_result{result!=\"pass\"}[5m])) / sum(rate(dmarc_spf_result[5m])) * 100"
-        intervalMs   = 1000
+        expr          = "sum(rate(dmarc_spf_result{result!=\"pass\"}[5m])) / sum(rate(dmarc_spf_result[5m])) * 100"
+        intervalMs    = 1000
         maxDataPoints = 43200
-        refId        = "A"
+        refId         = "A"
       })
     }
 
@@ -309,25 +309,25 @@ resource "grafana_rule_group" "dmarc_alerts" {
           type = "__expr__"
           uid  = "-100"
         }
-        expression = "A"
-        hide       = false
-        intervalMs = 1000
+        expression    = "A"
+        hide          = false
+        intervalMs    = 1000
         maxDataPoints = 43200
-        reducer    = "last"
-        refId      = "C"
-        type       = "threshold"
+        reducer       = "last"
+        refId         = "C"
+        type          = "threshold"
       })
     }
 
-    for = "10m"
-    no_data_state = "Alerting"
+    for            = "10m"
+    no_data_state  = "Alerting"
     exec_err_state = "Alerting"
-    
+
     annotations = {
       summary     = "SPF failure rate is {{ $value }}%"
       description = "SPF authentication failure rate has exceeded 10% for the last 10 minutes"
     }
-    
+
     labels = {
       severity = "warning"
       service  = "email-auth"
