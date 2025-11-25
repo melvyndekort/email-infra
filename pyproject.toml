@@ -8,7 +8,7 @@ dependencies = [
     "requests>=2.32",
     "boto3>=1.40",
     "prometheus-client>=0.21",
-    "python-snappy>=0.7",
+    "cramjam>=2.8",
 ]
 
 [project.optional-dependencies]

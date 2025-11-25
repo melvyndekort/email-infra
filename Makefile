@@ -1,4 +1,4 @@
-.PHONY: init plan apply destroy test clean install update-deps lint clean_secrets decrypt encrypt
+.PHONY: init plan apply destroy test clean install update-deps lint clean_secrets decrypt encrypt package-lambda deploy-lambda
 
 # Development setup
 install:
@@ -53,11 +53,19 @@ destroy: decrypt
 
 # Clean up generated files
 clean:
-	rm -f terraform/dmarc_processor.zip
+	rm -f terraform/dmarc_processor.zip lambda.zip
 	rm -f terraform/.terraform.lock.hcl
 	rm -rf terraform/.terraform/
-	rm -rf .coverage htmlcov/ .pytest_cache/ __pycache__/ email_infra/__pycache__/ tests/__pycache__/
+	rm -rf .coverage htmlcov/ .pytest_cache/ __pycache__/ email_infra/__pycache__/ tests/__pycache__/ package/ dist/
 
-# Package lambda for manual testing
+# Package lambda with dependencies
 package-lambda:
-	zip -j lambda.zip email_infra/handler.py email_infra/__init__.py
+	rm -rf package lambda.zip
+	uv build
+	uv run pip install --upgrade --platform manylinux2014_x86_64 --only-binary=":all:" -t package dist/*.whl
+	cd package && zip -qr ../lambda.zip . -x '*.pyc'
+	rm -rf package dist
+
+# Deploy lambda function
+deploy-lambda: package-lambda
+	aws lambda update-function-code --function-name dmarc-processor --zip-file fileb://lambda.zip

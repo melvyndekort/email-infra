@@ -7,10 +7,18 @@ import os
 import struct
 import time
 import xml.etree.ElementTree as ET
+import zipfile
+from email import message_from_bytes
+from io import BytesIO
 
 import boto3
 import requests
-import snappy
+
+try:
+    import cramjam
+    HAS_SNAPPY = True
+except ImportError:
+    HAS_SNAPPY = False
 
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
@@ -108,8 +116,15 @@ def _send_to_grafana(metric_name, value, labels=None):
     # Create write request
     write_request = _create_write_request([timeseries])
 
-    # Compress with Snappy
-    compressed_data = snappy.compress(write_request)
+    # Compress with snappy using cramjam (raw format for Prometheus)
+    if HAS_SNAPPY:
+        compressed_data = bytes(cramjam.snappy.compress_raw(write_request))
+        content_encoding = "snappy"
+    else:
+        # Fallback to gzip if snappy not available
+        compressed_data = gzip.compress(write_request)
+        content_encoding = "gzip"
+        LOGGER.warning("Using gzip compression instead of snappy")
 
     response = requests.post(
         grafana_url,
@@ -117,10 +132,14 @@ def _send_to_grafana(metric_name, value, labels=None):
         auth=(os.environ['GRAFANA_USER_ID'], grafana_token),
         headers={
             "Content-Type": "application/x-protobuf",
-            "Content-Encoding": "snappy"
+            "Content-Encoding": content_encoding
         },
         timeout=10
     )
+    
+    if response.status_code != 200:
+        LOGGER.error("Grafana error %d: %s", response.status_code, response.text)
+    
     response.raise_for_status()
 
 
@@ -194,6 +213,75 @@ def _process_dmarc_record(record_elem, org_name):
                count, source_ip, policy_results[0])
 
 
+def _extract_xml_from_email(content):
+    """Extract XML content from email message attachments."""
+    try:
+        # Parse email message
+        msg = message_from_bytes(content)
+        
+        # Look for attachments
+        for part in msg.walk():
+            if part.get_content_disposition() == 'attachment':
+                payload = part.get_payload(decode=True)
+                if payload:
+                    # Check if it's a ZIP file
+                    if part.get_content_type() == 'application/zip' or part.get_filename('').endswith('.zip'):
+                        try:
+                            with zipfile.ZipFile(BytesIO(payload)) as zip_file:
+                                for file_name in zip_file.namelist():
+                                    if file_name.endswith('.xml'):
+                                        xml_content = zip_file.read(file_name)
+                                        LOGGER.info("Found XML file in ZIP attachment: %s", file_name)
+                                        return xml_content
+                        except zipfile.BadZipFile:
+                            LOGGER.info("Invalid ZIP file in attachment")
+                            continue
+                    
+                    # Try to decompress if gzipped
+                    try:
+                        payload = gzip.decompress(payload)
+                        LOGGER.info("Decompressed gzipped attachment")
+                    except Exception:  # pylint: disable=broad-except
+                        LOGGER.info("Attachment not gzipped")
+                    
+                    # Check if it's XML content
+                    try:
+                        ET.fromstring(payload)
+                        LOGGER.info("Found XML attachment")
+                        return payload
+                    except ET.ParseError:
+                        continue
+        
+        # If no attachment found, maybe the XML is in the email body
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == 'text/plain':
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        try:
+                            ET.fromstring(payload)
+                            LOGGER.info("Found XML in email body")
+                            return payload
+                        except ET.ParseError:
+                            continue
+        else:
+            # Single part message
+            payload = msg.get_payload(decode=True)
+            if payload:
+                try:
+                    ET.fromstring(payload)
+                    LOGGER.info("Found XML in single-part email")
+                    return payload
+                except ET.ParseError:
+                    pass
+        
+        raise ValueError("No valid XML content found in email")
+        
+    except Exception as exc:
+        LOGGER.error("Failed to extract XML from email: %s", str(exc))
+        raise
+
+
 def _decompress_content(content):
     """Decompress content if it's gzipped."""
     try:
@@ -209,9 +297,16 @@ def _process_s3_object(bucket, key, s3):
     """Process a single S3 object containing DMARC report."""
     LOGGER.info("Processing DMARC report: %s", key)
 
-    # Get and decompress content
+    # Get content from S3
     response = s3.get_object(Bucket=bucket, Key=key)
-    content = _decompress_content(response['Body'].read())
+    raw_content = response['Body'].read()
+    
+    # Try to extract XML from email first, fallback to direct XML parsing
+    try:
+        content = _extract_xml_from_email(raw_content)
+    except Exception:  # pylint: disable=broad-except
+        LOGGER.info("Not an email message, trying direct XML parsing")
+        content = _decompress_content(raw_content)
 
     # Parse XML and extract metadata
     root = ET.fromstring(content)
