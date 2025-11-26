@@ -8,8 +8,9 @@ Comprehensive self-hosted email infrastructure with authentication, monitoring, 
 - **DKIM Signing**: Full DKIM signing for all domains via AWS SES
 - **Email DNS**: SPF, DMARC, DKIM, BIMI, MTA-STS, and TLS-RPT records for all domains
 - **Email Routing**: Cloudflare Email Routing with family member addresses and catch-all rules
-- **SMTP Services**: SES-based SMTP for applications (Calibre, Spotweb, etc.)
-- **Monitoring**: Grafana Cloud dashboard with DMARC and authentication metrics
+- **SMTP Services**: SES-based SMTP for applications (Calibre, Spotweb, Gmail forwarding)
+- **Monitoring**: Grafana Cloud dashboard with DMARC metrics and alerting
+- **Automated Deployment**: GitHub Actions with AWS OIDC for CI/CD
 - **Cost-effective**: Serverless architecture with minimal costs
 
 ## Domains Managed
@@ -42,7 +43,7 @@ Comprehensive self-hosted email infrastructure with authentication, monitoring, 
 
 **Email Services**
 - **SES** provides DKIM signing for all outbound emails
-- **Applications** use SES SMTP for sending (Calibre, Spotweb, etc.)
+- **Applications** use SES SMTP for sending (Calibre, Spotweb, Gmail forwarding)
 - **Cloudflare** routes incoming emails to family members
 
 ## Migration from EasyDMARC
@@ -64,6 +65,15 @@ This replaces EasyDMARC CNAME records with self-hosted DMARC collection:
 ### Local Development
 
 ```bash
+# Install dependencies
+make install
+
+# Run tests with coverage
+make test-cov
+
+# Lint code
+make lint
+
 # Initialize Terraform
 make init
 
@@ -73,6 +83,12 @@ make plan
 # Apply changes
 make apply
 
+# Package Lambda function
+make package-lambda
+
+# Deploy Lambda function
+make deploy-lambda
+
 # Clean up
 make clean
 ```
@@ -80,6 +96,12 @@ make clean
 ### Manual Commands
 
 ```bash
+# Python development
+uv sync --all-extras
+uv run pytest --cov=email_infra --cov-report=html
+uv run pylint email_infra tests
+
+# Terraform
 cd terraform
 terraform init
 terraform plan
@@ -90,11 +112,12 @@ terraform apply
 
 Managed via GitHub Actions with AWS OIDC authentication. Changes are automatically deployed when pushed to `main` branch.
 
-### GitHub Actions Workflow
+### GitHub Actions Workflows
 
-- **Trigger**: Push to main branch
+- **Pipeline**: Build, test, and deploy Lambda function on push to main
+- **Terraform**: Infrastructure deployment (separate workflow)
 - **Authentication**: AWS OIDC (no long-lived credentials)
-- **Steps**: Init → Plan → Apply
+- **Steps**: Install dependencies → Test → Build → Deploy Lambda
 
 ## Monitoring
 
@@ -108,6 +131,12 @@ Access the DMARC dashboard at: [mdekort.grafana.net](https://mdekort.grafana.net
 - `dmarc_spf_result` - SPF authentication results  
 - `dmarc_dkim_result` - DKIM authentication results
 - `dmarc_policy_result` - DMARC policy evaluation results
+
+### Alerting
+
+- **DMARC Failures**: Alerts when DMARC failures exceed threshold over 7 days
+- **Lambda Errors**: CloudWatch alarm for Lambda function errors
+- **Notifications**: Sent via ntfy to configured endpoints
 
 ## Cost Estimation
 
@@ -135,7 +164,7 @@ Check CloudWatch Logs: `/aws/lambda/dmarc-processor`
 
 1. Check SES sending statistics for bounces/complaints
 2. Verify DKIM records are properly configured
-3. Confirm application SMTP credentials are correct
+3. Confirm application SMTP credentials are correct (Calibre, Spotweb, Gmail forwarding)
 4. Check SES sandbox mode (if applicable)
 
 ### DNS Issues
