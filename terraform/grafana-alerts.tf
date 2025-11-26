@@ -47,18 +47,18 @@ resource "grafana_rule_group" "dmarc_alerts" {
   interval_seconds = 300
 
   rule {
-    name      = "High DMARC Failure Rate"
+    name      = "DMARC Authentication Failures"
     condition = "C"
 
     data {
       ref_id = "A"
       relative_time_range {
-        from = 600
+        from = 300
         to   = 0
       }
       datasource_uid = local.prometheus_uid
       model = jsonencode({
-        expr          = "sum(rate(dmarc_email_count{dmarc_result!=\"pass\"}[5m])) / sum(rate(dmarc_email_count[5m])) * 100"
+        expr          = "sum(increase(dmarc_email_count{dmarc_result!=\"pass\"}[5m]))"
         intervalMs    = 1000
         maxDataPoints = 43200
         refId         = "A"
@@ -76,7 +76,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         conditions = [
           {
             evaluator = {
-              params = [5]
+              params = [0]
               type   = "gt"
             }
             operator = {
@@ -106,13 +106,13 @@ resource "grafana_rule_group" "dmarc_alerts" {
       })
     }
 
-    for            = "5m"
-    no_data_state  = "Alerting"
+    for            = "0s"
+    no_data_state  = "NoData"
     exec_err_state = "Alerting"
 
     annotations = {
-      summary     = "DMARC failure rate is {{ $value }}%"
-      description = "DMARC authentication failure rate has exceeded 5% for the last 5 minutes"
+      summary     = "{{ $value }} DMARC authentication failures detected"
+      description = "DMARC authentication failures detected in the last 5 minutes"
     }
 
     labels = {
@@ -182,7 +182,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
     }
 
     for            = "1m"
-    no_data_state  = "Alerting"
+    no_data_state  = "NoData"
     exec_err_state = "Alerting"
 
     annotations = {
@@ -257,7 +257,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
     }
 
     for            = "1h"
-    no_data_state  = "Alerting"
+    no_data_state  = "NoData"
     exec_err_state = "Alerting"
 
     annotations = {
@@ -272,18 +272,18 @@ resource "grafana_rule_group" "dmarc_alerts" {
   }
 
   rule {
-    name      = "SPF Authentication Failure Spike"
+    name      = "SPF Authentication Failures"
     condition = "C"
 
     data {
       ref_id = "A"
       relative_time_range {
-        from = 1800
+        from = 300
         to   = 0
       }
       datasource_uid = local.prometheus_uid
       model = jsonencode({
-        expr          = "sum(rate(dmarc_spf_result{result!=\"pass\"}[5m])) / sum(rate(dmarc_spf_result[5m])) * 100"
+        expr          = "sum(increase(dmarc_spf_result{result!=\"pass\"}[5m]))"
         intervalMs    = 1000
         maxDataPoints = 43200
         refId         = "A"
@@ -301,7 +301,7 @@ resource "grafana_rule_group" "dmarc_alerts" {
         conditions = [
           {
             evaluator = {
-              params = [10]
+              params = [0]
               type   = "gt"
             }
             operator = {
@@ -331,13 +331,13 @@ resource "grafana_rule_group" "dmarc_alerts" {
       })
     }
 
-    for            = "10m"
-    no_data_state  = "Alerting"
+    for            = "0s"
+    no_data_state  = "NoData"
     exec_err_state = "Alerting"
 
     annotations = {
-      summary     = "SPF failure rate is {{ $value }}%"
-      description = "SPF authentication failure rate has exceeded 10% for the last 10 minutes"
+      summary     = "{{ $value }} SPF authentication failures detected"
+      description = "SPF authentication failures detected in the last 5 minutes"
     }
 
     labels = {
