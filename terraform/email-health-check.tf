@@ -7,7 +7,7 @@ resource "aws_lambda_function" "email_health_check" {
   architectures = ["arm64"]
   timeout       = 30
 
-  filename = data.archive_file.email_health_check.output_path
+  filename         = data.archive_file.email_health_check.output_path
   source_code_hash = data.archive_file.email_health_check.output_base64sha256
 
   environment {
@@ -21,7 +21,7 @@ resource "aws_lambda_function" "email_health_check" {
 data "archive_file" "email_health_check" {
   type        = "zip"
   output_path = "email-health-check.zip"
-  
+
   source {
     filename = "index.py"
     content  = <<EOF
@@ -48,12 +48,12 @@ EOF
 
 resource "aws_iam_role" "email_health_check" {
   name = "email-health-check-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
       Principal = { Service = "lambda.amazonaws.com" }
     }]
   })
@@ -62,18 +62,18 @@ resource "aws_iam_role" "email_health_check" {
 resource "aws_iam_role_policy" "email_health_check" {
   name = "email-health-check-policy"
   role = aws_iam_role.email_health_check.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:*:*:*"
       },
       {
-        Effect = "Allow"
-        Action = ["ses:SendEmail"]
+        Effect   = "Allow"
+        Action   = ["ses:SendEmail"]
         Resource = "*"
       }
     ]
