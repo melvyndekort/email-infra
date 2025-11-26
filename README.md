@@ -147,6 +147,79 @@ Access the DMARC dashboard at: [mdekort.grafana.net](https://mdekort.grafana.net
 
 **Estimated monthly cost**: <$5 for typical email volumes
 
+## Testing
+
+### Lambda Function Testing
+
+To test the DMARC processor Lambda function, upload a test DMARC report to S3:
+
+```bash
+# Create a test DMARC report
+cat > /tmp/test-dmarc.xml << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<feedback>
+  <report_metadata>
+    <org_name>Test Organization</org_name>
+    <email>test@example.com</email>
+    <report_id>test-$(date +%s)</report_id>
+    <date_range>
+      <begin>$(date -d '1 day ago' +%s)</begin>
+      <end>$(date +%s)</end>
+    </date_range>
+  </report_metadata>
+  <policy_published>
+    <domain>example.com</domain>
+    <p>reject</p>
+    <sp>reject</sp>
+    <pct>100</pct>
+  </policy_published>
+  <record>
+    <row>
+      <source_ip>192.168.1.1</source_ip>
+      <count>1</count>
+      <policy_evaluated>
+        <disposition>none</disposition>
+        <dkim>pass</dkim>
+        <spf>pass</spf>
+      </policy_evaluated>
+    </row>
+    <identifiers>
+      <header_from>example.com</header_from>
+    </identifiers>
+    <auth_results>
+      <dkim>
+        <domain>example.com</domain>
+        <result>pass</result>
+      </dkim>
+      <spf>
+        <domain>example.com</domain>
+        <result>pass</result>
+      </spf>
+    </auth_results>
+  </record>
+</feedback>
+EOF
+
+# Upload test report to trigger Lambda processing
+aws s3 cp /tmp/test-dmarc.xml s3://melvyndekort-dmarc-reports/dmarc/test-$(date +%s).xml
+
+# Check CloudWatch logs for processing results
+aws logs get-log-events \
+  --log-group-name "/aws/lambda/dmarc-processor" \
+  --log-stream-name "$(aws logs describe-log-streams \
+    --log-group-name "/aws/lambda/dmarc-processor" \
+    --order-by LastEventTime --descending --max-items 1 \
+    --query 'logStreams[0].logStreamName' --output text)" \
+  --start-time $(date -d '5 minutes ago' +%s)000 \
+  --query 'events[*].message' --output text
+```
+
+Expected log output should show:
+- `Processing DMARC report: dmarc/test-xxxxx.xml`
+- `Found XML attachment`
+- `Processing report from Test Organization`
+- `Sent metrics for X emails`
+
 ## Troubleshooting
 
 ### Lambda Errors
