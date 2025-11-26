@@ -164,6 +164,7 @@ resource "aws_lambda_function" "dmarc_processor" {
   role          = aws_iam_role.dmarc_processor.arn
   handler       = "email_infra.handler.handler"
   runtime       = "python3.12"
+  architectures = ["arm64"]
   timeout       = 60
   memory_size   = var.lambda_memory_size
 

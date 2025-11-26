@@ -62,7 +62,7 @@ clean:
 package-lambda:
 	rm -rf package lambda.zip
 	uv build
-	uv run pip install --upgrade --platform manylinux2014_x86_64 --only-binary=":all:" -t package dist/*.whl
+	uv run pip install --upgrade --platform manylinux2014_aarch64 --only-binary=":all:" -t package dist/*.whl
 	cd package && zip -qr ../lambda.zip . -x '*.pyc'
 	rm -rf package dist
 
