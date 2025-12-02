@@ -13,13 +13,13 @@ resource "grafana_contact_point" "ntfy" {
   name = "ntfy-alerts"
 
   webhook {
-    url         = "https://ntfy.mdekort.nl/grafana"
-    http_method = "POST"
-    authorization_scheme = "Bearer"
+    url                       = "https://ntfy.mdekort.nl/grafana"
+    http_method               = "POST"
+    authorization_scheme      = "Bearer"
     authorization_credentials = local.secrets.ntfy.token
-    
+
     message = "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
-    
+
     headers = {
       "Title"    = "{{ .GroupLabels.alertname }}"
       "Priority" = "{{ if eq .Status \"firing\" }}high{{ else }}default{{ end }}"
@@ -55,8 +55,8 @@ resource "grafana_rule_group" "email_alerts" {
       }
       datasource_uid = data.grafana_data_source.prometheus.uid
       model = jsonencode({
-        expr   = "sum(increase(dmarc_email_count{dmarc_result!=\"pass\"}[7d]))"
-        refId  = "A"
+        expr  = "sum(increase(dmarc_email_count{dmarc_result!=\"pass\"}[7d]))"
+        refId = "A"
       })
     }
 
