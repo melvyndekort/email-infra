@@ -20,6 +20,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   statistic           = "Sum"
   threshold           = "0"
   alarm_description   = "This metric monitors lambda errors"
+  alarm_actions       = [data.terraform_remote_state.tf_aws.outputs.notifications_topic_arn]
 
   dimensions = {
     FunctionName = aws_lambda_function.dmarc_processor.function_name
