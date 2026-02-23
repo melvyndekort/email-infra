@@ -167,7 +167,7 @@ def _extract_policy_results(record_elem):
     """Extract DMARC, SPF, and DKIM results from record element."""
     policy_eval = record_elem.find('.//policy_evaluated')
 
-    dmarc_elem = policy_eval.find('.//dmarc') if policy_eval is not None else None
+    dmarc_elem = policy_eval.find('.//disposition') if policy_eval is not None else None
     dmarc_result = _extract_text_or_default(dmarc_elem)
 
     spf_elem = policy_eval.find('.//spf') if policy_eval is not None else None
