@@ -64,3 +64,4 @@ Thumbs.db
 
 # CodeClimate
 .codeclimate.yml
+terraform/tfplan
