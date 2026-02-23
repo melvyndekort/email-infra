@@ -6,7 +6,7 @@ resource "cloudflare_dns_record" "spf" {
   name    = "@"
   type    = "TXT"
   ttl     = var.dns_ttl
-  content = "v=spf1 include:_spf.mx.cloudflare.net ~all"
+  content = "v=spf1 include:_spf.mx.cloudflare.net include:amazonses.com ~all"
 }
 
 resource "cloudflare_dns_record" "dmarc" {
