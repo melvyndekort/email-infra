@@ -69,3 +69,11 @@ package-lambda:
 # Deploy lambda function
 deploy-lambda: package-lambda
 	aws lambda update-function-code --function-name dmarc-processor --zip-file fileb://lambda.zip
+
+format: install
+	@uv run ruff format .
+	@uv run ruff check --fix .
+
+package: package-lambda
+
+deploy: deploy-lambda
