@@ -18,7 +18,7 @@ dev = [
     "pylint>=4.0.5",
     "boto3>=1.40",
     "moto>=5.1.22",
-    "boto3-stubs>=1.40",
+    "boto3-stubs>=1.42.88",
 ]
 
 [tool.hatch.build.targets.wheel]
