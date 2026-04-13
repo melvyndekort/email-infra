@@ -5,7 +5,7 @@ description = "Email infrastructure with DMARC collection and DNS management"
 authors = [{name = "Melvyn de Kort", email = "melvyn@mdekort.nl"}]
 requires-python = ">=3.12"
 dependencies = [
-    "requests>=2.32",
+    "requests>=2.33.1",
     "boto3>=1.40",
     "prometheus-client>=0.21",
     "cramjam>=2.8",
