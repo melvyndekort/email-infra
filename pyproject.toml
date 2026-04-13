@@ -6,7 +6,7 @@ authors = [{name = "Melvyn de Kort", email = "melvyn@mdekort.nl"}]
 requires-python = ">=3.12"
 dependencies = [
     "requests>=2.33.1",
-    "boto3>=1.40",
+    "boto3>=1.42.88",
     "prometheus-client>=0.25.0",
     "cramjam>=2.11.0",
 ]
@@ -16,7 +16,7 @@ dev = [
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
     "pylint>=4.0.5",
-    "boto3>=1.40",
+    "boto3>=1.42.88",
     "moto>=5.1.22",
     "boto3-stubs>=1.42.88",
 ]
