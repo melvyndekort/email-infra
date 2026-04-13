@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "requests>=2.33.1",
     "boto3>=1.40",
-    "prometheus-client>=0.21",
+    "prometheus-client>=0.25.0",
     "cramjam>=2.11.0",
 ]
 
