@@ -27,6 +27,8 @@ Terraform creates Lambdas with dummy code and `ignore_changes` on `source_code_h
 - Backend: S3 key `email-infra.tfstate` in `mdekort-tfstate-075673041815`
 - Providers: AWS `~> 6.0`, Cloudflare `~> 5.0`, Grafana `~> 4.8`, Archive `~> 2.0`
 - Secrets: KMS context `target=email-infra`
+- **Still in the management account.** Priority 2 subaccount migration
+  candidate — see `~/.claude/references/subaccount-migration.md`.
 
 ## CI/CD
 
