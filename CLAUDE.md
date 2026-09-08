@@ -1,6 +1,6 @@
 # email-infra
 
-> For global standards, way-of-workings, and pre-commit checklist, see `~/.kiro/steering/behavior.md`
+> For global standards, way-of-workings, and pre-commit checklist, see `~/.claude/CLAUDE.md`
 
 ## Role
 
@@ -31,6 +31,10 @@ Terraform creates Lambdas with dummy code and `ignore_changes` on `source_code_h
 ## CI/CD
 
 Three workflows: `pipeline.yml` (code), `terraform.yml` (infra), `mta-sts.yml` (MTA-STS policy to S3)
+
+## MCP servers
+
+This repo has project-scoped `cloudflare` and `grafana` MCP servers (`.mcp.json`) — see `~/.claude/references/mcp-catalog.md`.
 
 ## Related Repositories
 
