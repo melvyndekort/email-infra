@@ -21,10 +21,9 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Publish to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: mta-sts-mdekort-nl
-          directory: mta-sts
+          command: pages deploy mta-sts --project-name=mta-sts-mdekort-nl
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
