@@ -30,6 +30,9 @@ pythonpath = ["."]
 
 [tool.pylint.main]
 load-plugins = ["pylint.extensions.docparams"]
+# cramjam is a compiled Rust extension - pylint's static analysis can't
+# introspect its submodules (e.g. cramjam.snappy) without this.
+extension-pkg-allow-list = ["cramjam"]
 
 [tool.pylint.format]
 max-line-length = 120

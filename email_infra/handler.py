@@ -208,67 +208,92 @@ def _process_dmarc_record(record_elem, org_name):
     return metrics
 
 
-def _extract_xml_from_email(content):
-    """Extract XML content from email message attachments."""
+def _decode_xml_payload(payload):
+    """Gzip-decompress payload if possible, then return it if it parses as XML, else None."""
     try:
-        # Parse email message
-        msg = message_from_bytes(content)
+        payload = gzip.decompress(payload)
+        LOGGER.info("Decompressed gzipped attachment")
+    except Exception:  # pylint: disable=broad-except
+        LOGGER.info("Attachment not gzipped")
 
-        # Look for attachments
+    try:
+        ET.fromstring(payload)
+        LOGGER.info("Found XML attachment")
+        return payload
+    except ET.ParseError:
+        return None
+
+
+def _extract_xml_from_attachment(part):
+    """Return XML content from a single attachment part, or None to skip it."""
+    payload = part.get_payload(decode=True)
+    if not payload:
+        return None
+
+    if part.get_content_type() == 'application/zip' or part.get_filename('').endswith('.zip'):
+        try:
+            with zipfile.ZipFile(BytesIO(payload)) as zip_file:
+                for file_name in zip_file.namelist():
+                    if file_name.endswith('.xml'):
+                        xml_content = zip_file.read(file_name)
+                        LOGGER.info("Found XML file in ZIP attachment: %s", file_name)
+                        return xml_content
+        except zipfile.BadZipFile:
+            LOGGER.info("Invalid ZIP file in attachment")
+            return None
+
+    return _decode_xml_payload(payload)
+
+
+def _extract_xml_from_attachments(msg):
+    """Return XML content from the first attachment that yields any, or None."""
+    for part in msg.walk():
+        if part.get_content_disposition() == 'attachment':
+            xml_content = _extract_xml_from_attachment(part)
+            if xml_content is not None:
+                return xml_content
+    return None
+
+
+def _extract_xml_from_body(msg):
+    """Return XML content found directly in the email body, or None."""
+    if msg.is_multipart():
         for part in msg.walk():
-            if part.get_content_disposition() == 'attachment':
+            if part.get_content_type() == 'text/plain':
                 payload = part.get_payload(decode=True)
                 if payload:
-                    # Check if it's a ZIP file
-                    if part.get_content_type() == 'application/zip' or part.get_filename('').endswith('.zip'):
-                        try:
-                            with zipfile.ZipFile(BytesIO(payload)) as zip_file:
-                                for file_name in zip_file.namelist():
-                                    if file_name.endswith('.xml'):
-                                        xml_content = zip_file.read(file_name)
-                                        LOGGER.info("Found XML file in ZIP attachment: %s", file_name)
-                                        return xml_content
-                        except zipfile.BadZipFile:
-                            LOGGER.info("Invalid ZIP file in attachment")
-                            continue
-
-                    # Try to decompress if gzipped
-                    try:
-                        payload = gzip.decompress(payload)
-                        LOGGER.info("Decompressed gzipped attachment")
-                    except Exception:  # pylint: disable=broad-except
-                        LOGGER.info("Attachment not gzipped")
-
-                    # Check if it's XML content
                     try:
                         ET.fromstring(payload)
-                        LOGGER.info("Found XML attachment")
+                        LOGGER.info("Found XML in email body")
                         return payload
                     except ET.ParseError:
                         continue
+        return None
 
-        # If no attachment found, maybe the XML is in the email body
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == 'text/plain':
-                    payload = part.get_payload(decode=True)
-                    if payload:
-                        try:
-                            ET.fromstring(payload)
-                            LOGGER.info("Found XML in email body")
-                            return payload
-                        except ET.ParseError:
-                            continue
-        else:
-            # Single part message
-            payload = msg.get_payload(decode=True)
-            if payload:
-                try:
-                    ET.fromstring(payload)
-                    LOGGER.info("Found XML in single-part email")
-                    return payload
-                except ET.ParseError:
-                    pass
+    # Single part message
+    payload = msg.get_payload(decode=True)
+    if payload:
+        try:
+            ET.fromstring(payload)
+            LOGGER.info("Found XML in single-part email")
+            return payload
+        except ET.ParseError:
+            pass
+    return None
+
+
+def _extract_xml_from_email(content):
+    """Extract XML content from email message attachments, falling back to the body."""
+    try:
+        msg = message_from_bytes(content)
+
+        xml_content = _extract_xml_from_attachments(msg)
+        if xml_content is not None:
+            return xml_content
+
+        xml_content = _extract_xml_from_body(msg)
+        if xml_content is not None:
+            return xml_content
 
         raise ValueError("No valid XML content found in email")
 
