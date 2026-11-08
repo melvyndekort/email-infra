@@ -102,6 +102,48 @@ def _get_grafana_token():
     return response['Parameter']['Value']
 
 
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+MAX_PUSH_ATTEMPTS = 4
+BASE_BACKOFF_SECONDS = 1.0
+
+
+def _post_with_retry(url, **kwargs):
+    """POST with bounded retry/backoff on transient (429/5xx) errors.
+
+    Grafana Cloud's per-tenant Mimir request-rate limit can reject an
+    occasional request with a 429 even at very low, legitimate volume
+    (a shared-tenant throttle, not something our own traffic causes).
+    Retrying with backoff absorbs that instead of surfacing it as a
+    Lambda error that trips the CloudWatch alarm.
+    """
+    last_response = None
+    for attempt in range(1, MAX_PUSH_ATTEMPTS + 1):
+        response = requests.post(url, **kwargs)  # pylint: disable=missing-timeout
+        last_response = response
+
+        if response.status_code not in RETRYABLE_STATUS_CODES:
+            return response
+
+        if attempt == MAX_PUSH_ATTEMPTS:
+            break
+
+        retry_after = response.headers.get("Retry-After")
+        try:
+            delay = float(retry_after) if retry_after is not None else None
+        except ValueError:
+            delay = None
+        if delay is None:
+            delay = BASE_BACKOFF_SECONDS * (2 ** (attempt - 1))
+
+        LOGGER.warning(
+            "Grafana push got %d (attempt %d/%d), retrying in %.1fs: %s",
+            response.status_code, attempt, MAX_PUSH_ATTEMPTS, delay, response.text
+        )
+        time.sleep(delay)
+
+    return last_response
+
+
 def _send_metrics_batch(metrics_list):
     """Send multiple metrics to Grafana Cloud in a single request."""
     if not metrics_list:
@@ -130,7 +172,7 @@ def _send_metrics_batch(metrics_list):
         content_encoding = "gzip"
         LOGGER.warning("Using gzip compression instead of snappy")
 
-    response = requests.post(
+    response = _post_with_retry(
         grafana_url,
         data=compressed_data,
         auth=(os.environ['GRAFANA_USER_ID'], grafana_token),
