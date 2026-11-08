@@ -167,6 +167,99 @@ def test_handler_with_missing_xml_elements(mock_boto3, mock_get_token, mock_requ
     assert mock_requests.call_count == 1
 
 
+@patch("email_infra.handler.time.sleep")
+@patch("email_infra.handler.requests.post")
+@patch("email_infra.handler._get_grafana_token")
+@patch("email_infra.handler.boto3.client")
+@patch.dict(os.environ, {
+    "GRAFANA_PUSH_URL": "https://test.grafana.net/api/v1/push",
+    "GRAFANA_USER_ID": "test_user"
+})
+def test_handler_retries_on_grafana_429(mock_boto3, mock_get_token, mock_requests, mock_sleep):
+    """A transient 429 from Grafana is retried and the invocation still succeeds."""
+    mock_s3 = Mock()
+    mock_boto3.return_value = mock_s3
+    mock_get_token.return_value = "test-token"
+
+    rate_limited = Mock(status_code=429, text="rate limited")
+    rate_limited.headers = {}
+    ok = Mock(status_code=200, text="")
+    ok.headers = {}
+    ok.raise_for_status.return_value = None
+    mock_requests.side_effect = [rate_limited, ok]
+
+    xml_content = ('<feedback><report_metadata><org_name>test</org_name></report_metadata>'
+                   '<record><row><source_ip>1.2.3.4</source_ip><count>1</count>'
+                   '<policy_evaluated><dmarc>pass</dmarc><spf>pass</spf><dkim>pass</dkim>'
+                   '</policy_evaluated></row></record></feedback>')
+    mock_s3.get_object.return_value = {
+        "Body": Mock(read=xml_content.encode)
+    }
+
+    event = {
+        "Records": [{
+            "s3": {
+                "bucket": {"name": "test-bucket"},
+                "object": {"key": "test-report.xml"}
+            }
+        }]
+    }
+    context = Mock()
+
+    result = handler(event, context)
+
+    assert result["statusCode"] == 200
+    assert mock_requests.call_count == 2
+    mock_sleep.assert_called_once()
+
+
+@patch("email_infra.handler.time.sleep")
+@patch("email_infra.handler.requests.post")
+@patch("email_infra.handler._get_grafana_token")
+@patch("email_infra.handler.boto3.client")
+@patch.dict(os.environ, {
+    "GRAFANA_PUSH_URL": "https://test.grafana.net/api/v1/push",
+    "GRAFANA_USER_ID": "test_user"
+})
+def test_handler_raises_after_exhausting_retries(mock_boto3, mock_get_token, mock_requests, mock_sleep):
+    """Persistent 429s still raise after the retry budget is exhausted."""
+    mock_s3 = Mock()
+    mock_boto3.return_value = mock_s3
+    mock_get_token.return_value = "test-token"
+
+    def make_rate_limited():
+        resp = Mock(status_code=429, text="rate limited")
+        resp.headers = {}
+        resp.raise_for_status.side_effect = Exception("429 Client Error")
+        return resp
+
+    mock_requests.side_effect = [make_rate_limited() for _ in range(4)]
+
+    xml_content = ('<feedback><report_metadata><org_name>test</org_name></report_metadata>'
+                   '<record><row><source_ip>1.2.3.4</source_ip><count>1</count>'
+                   '<policy_evaluated><dmarc>pass</dmarc><spf>pass</spf><dkim>pass</dkim>'
+                   '</policy_evaluated></row></record></feedback>')
+    mock_s3.get_object.return_value = {
+        "Body": Mock(read=xml_content.encode)
+    }
+
+    event = {
+        "Records": [{
+            "s3": {
+                "bucket": {"name": "test-bucket"},
+                "object": {"key": "test-report.xml"}
+            }
+        }]
+    }
+    context = Mock()
+
+    with pytest.raises(Exception, match="429 Client Error"):
+        handler(event, context)
+
+    assert mock_requests.call_count == 4
+    assert mock_sleep.call_count == 3
+
+
 @patch("email_infra.handler.boto3.client")
 def test_handler_with_s3_error(mock_boto3):
     """Test handler with S3 error."""
